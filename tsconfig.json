@@ -7,6 +7,10 @@
     "experimentalDecorators": true,
     "allowSyntheticDefaultImports": true,
     "target": "ES2021",
+    "paths": {
+      // Это говорит TS и tsconfig-paths: "Когда видишь '@prisma/client', ищи здесь:"
+      "@prisma/client": ["src/generated/prisma/index.js"] 
+    },
     "sourceMap": true,
     "outDir": "./dist",
     "baseUrl": "./",
