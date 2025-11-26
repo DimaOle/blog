@@ -1,4 +1,9 @@
-import { BadRequestException, Injectable, InternalServerErrorException } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  InternalServerErrorException,
+  UnauthorizedException,
+} from '@nestjs/common';
 import { LoginInDto, RegisterLocalUserDto } from './dto';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { JwtService } from '@nestjs/jwt';
@@ -34,10 +39,24 @@ export class AuthService {
     return craeteUser;
   }
 
-  async logIn(dto: LoginInDto) {}
+  async logInLocal(dto: LoginInDto) {
+    const user = await this.prisma.user.findUnique({ where: { email: dto.email } });
 
-  private async createJwtToken(email: string, role: RoleEnum): Promise<{ access_token: string }> {
-    const payload = { user: email, role: role };
+    if (!user) {
+      throw new UnauthorizedException('Invalid email or password');
+    }
+
+    const passwordIsMatch = await bcrypt.compare(dto.password, user.password);
+
+    if (!passwordIsMatch) {
+      throw new UnauthorizedException('Invalid email or password');
+    }
+
+    await this.createJwtToken(dto.email, user.password);
+  }
+
+  private async createJwtToken(email: string, password: string): Promise<{ access_token: string }> {
+    const payload = { user: email, pas: password };
     const token = await this.jwtService.signAsync(payload);
     return {
       access_token: token,
