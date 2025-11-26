@@ -10,7 +10,6 @@ export class CustomValidationPipe implements PipeTransform<any> {
     }
     const object = plainToInstance(metatype, value);
     const errors = await validate(object);
-    console.log(errors[0]);
     if (errors.length > 0) {
       const massage = errors.map((el) => {
         const errors = Object.values(el.constraints).join(',');

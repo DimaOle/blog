@@ -6,7 +6,6 @@ export class RegisterLocalUserDto {
   @IsNotEmpty()
   email: string;
 
-  @IsEmail()
   @IsNotEmpty()
   @Length(6, 12)
   @Matches(/^(?=.*[A-Za-z])(?=.*\d).+$/, {

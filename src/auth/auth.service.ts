@@ -1,19 +1,29 @@
 import { BadRequestException, Injectable, InternalServerErrorException } from '@nestjs/common';
-import { RegisterLocalUserDto } from './dto';
+import { LoginInDto, RegisterLocalUserDto } from './dto';
 import { PrismaService } from 'src/prisma/prisma.service';
-
+import { JwtService } from '@nestjs/jwt';
+import * as bcrypt from 'bcrypt';
+import { RoleEnum } from '@prisma/client';
+import { CreatedUser } from 'src/prisma/types';
 @Injectable()
 export class AuthService {
-  constructor(readonly prisma: PrismaService) {}
-  async loginLocal(dto: RegisterLocalUserDto) {
+  constructor(readonly prisma: PrismaService, private jwtService: JwtService) {}
+  async loginLocal(dto: RegisterLocalUserDto): Promise<CreatedUser> {
     const findUser = await this.prisma.user.findUnique({ where: { email: dto.email } });
 
     if (findUser) {
       throw new BadRequestException('try another email');
     }
 
+    const hashedPassword = await bcrypt.hash(dto.password, 10);
     const craeteUser = await this.prisma.user.create({
-      data: { ...dto, provider: 'LOCAL', role: ['USER'], updateAt: new Date() },
+      data: {
+        ...dto,
+        password: hashedPassword,
+        provider: 'LOCAL',
+        role: ['USER'],
+        updateAt: new Date(),
+      },
       select: { id: true, firstName: true, lastName: true, email: true, createdAt: true },
     });
 
@@ -22,5 +32,15 @@ export class AuthService {
     }
 
     return craeteUser;
+  }
+
+  async logIn(dto: LoginInDto) {}
+
+  private async createJwtToken(email: string, role: RoleEnum): Promise<{ access_token: string }> {
+    const payload = { user: email, role: role };
+    const token = await this.jwtService.signAsync(payload);
+    return {
+      access_token: token,
+    };
   }
 }
