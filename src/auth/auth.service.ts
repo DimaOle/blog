@@ -10,10 +10,18 @@ import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcrypt';
 import { RoleEnum } from '@prisma/client';
 import { CreatedUser } from 'src/prisma/types';
+import { v4 as uuidv4 } from 'uuid';
+import ms from 'ms';
+import { ConfigService } from '@nestjs/config';
+import { PayloadRefreshToken } from './interfaces';
 @Injectable()
 export class AuthService {
-  constructor(readonly prisma: PrismaService, private jwtService: JwtService) {}
-  async loginLocal(dto: RegisterLocalUserDto): Promise<CreatedUser> {
+  constructor(
+    readonly prisma: PrismaService,
+    private jwtService: JwtService,
+    private configServise: ConfigService,
+  ) {}
+  async registerLocal(dto: RegisterLocalUserDto): Promise<CreatedUser> {
     const findUser = await this.prisma.user.findUnique({ where: { email: dto.email } });
 
     if (findUser) {
@@ -52,7 +60,7 @@ export class AuthService {
       throw new UnauthorizedException('Invalid email or password');
     }
 
-    await this.createJwtToken(dto.email, user.password);
+    return this.createJwtToken(dto.email, user.password);
   }
 
   private async createJwtToken(email: string, password: string): Promise<{ access_token: string }> {
@@ -61,5 +69,15 @@ export class AuthService {
     return {
       access_token: token,
     };
+  }
+
+  private async createRefreshToken(
+    userId: string,
+    userAgent: string,
+  ): Promise<PayloadRefreshToken> {
+    const uuidV4 = uuidv4();
+    const epxDate = new Date(Date.now() + ms(this.configServise.getOrThrow<string>('REFRESH_EXP')));
+
+    await this.prisma.token.upsert();
   }
 }
