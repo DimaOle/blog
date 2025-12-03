@@ -71,13 +71,13 @@ export class AuthService {
     };
   }
 
-  private async createRefreshToken(
-    userId: string,
-    userAgent: string,
-  ): Promise<PayloadRefreshToken> {
-    const uuidV4 = uuidv4();
-    const epxDate = new Date(Date.now() + ms(this.configServise.getOrThrow<string>('REFRESH_EXP')));
+  // private async createRefreshToken(
+  //   userId: string,
+  //   userAgent: string,
+  // ): Promise<PayloadRefreshToken> {
+  //   const uuidV4 = uuidv4();
+  //   const epxDate = new Date(Date.now() + ms(this.configServise.getOrThrow<string>('REFRESH_EXP')));
 
-    await this.prisma.token.upsert();
-  }
+  //   await this.prisma.token.upsert();
+  // }
 }
