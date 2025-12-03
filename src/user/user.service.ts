@@ -4,15 +4,15 @@ import { CreatedUser } from 'src/prisma/types';
 
 @Injectable()
 export class UserService {
-  constructor(readonly prisma: PrismaService) {}
+  constructor(private readonly prisma: PrismaService) {}
 
-  async getUserByEmail(email: string): Promise<CreatedUser | object> {
+  async getUserByEmail(email: string): Promise<CreatedUser | null> {
     try {
       const user = await this.prisma.user.findFirst({
         where: { email },
         select: { id: true, email: true, firstName: true, lastName: true, createdAt: true },
       });
-      return user ?? {};
+      return user;
     } catch (e) {
       console.log(`Prisma: ${e}`);
       throw new InternalServerErrorException('Database error');

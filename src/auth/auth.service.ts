@@ -8,21 +8,23 @@ import { LoginInDto, RegisterLocalUserDto } from './dto';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcrypt';
-import { RoleEnum } from '@prisma/client';
 import { CreatedUser } from 'src/prisma/types';
 import { v4 as uuidv4 } from 'uuid';
-import ms from 'ms';
 import { ConfigService } from '@nestjs/config';
 import { PayloadRefreshToken } from './interfaces';
+import { UserService } from 'src/user/user.service';
+// eslint-disable-next-line @typescript-eslint/no-var-requires
+const ms = require('ms');
 @Injectable()
 export class AuthService {
   constructor(
-    readonly prisma: PrismaService,
-    private jwtService: JwtService,
+    private readonly prisma: PrismaService,
     private configServise: ConfigService,
+    private userService: UserService,
+    private jwtService: JwtService,
   ) {}
   async registerLocal(dto: RegisterLocalUserDto): Promise<CreatedUser> {
-    const findUser = await this.prisma.user.findUnique({ where: { email: dto.email } });
+    const findUser = await this.userService.getUserByEmail(dto.email);
 
     if (findUser) {
       throw new BadRequestException('try another email');
@@ -47,7 +49,7 @@ export class AuthService {
     return craeteUser;
   }
 
-  async logInLocal(dto: LoginInDto) {
+  async logInLocal(dto: LoginInDto, userAgent: string) {
     const user = await this.prisma.user.findUnique({ where: { email: dto.email } });
 
     if (!user) {
@@ -59,7 +61,8 @@ export class AuthService {
     if (!passwordIsMatch) {
       throw new UnauthorizedException('Invalid email or password');
     }
-
+    const test = await this.createRefreshToken(user.id, userAgent);
+    console.log(test);
     return this.createJwtToken(dto.email, user.password);
   }
 
@@ -67,17 +70,36 @@ export class AuthService {
     const payload = { user: email, pas: password };
     const token = await this.jwtService.signAsync(payload);
     return {
-      access_token: token,
+      access_token: `Bearer ${token}`,
     };
   }
 
-  // private async createRefreshToken(
-  //   userId: string,
-  //   userAgent: string,
-  // ): Promise<PayloadRefreshToken> {
-  //   const uuidV4 = uuidv4();
-  //   const epxDate = new Date(Date.now() + ms(this.configServise.getOrThrow<string>('REFRESH_EXP')));
+  private async createRefreshToken(
+    userId: string,
+    userAgent: string,
+  ): Promise<PayloadRefreshToken> {
+    const uuidV4 = uuidv4();
+    const refreshExp = this.configServise.get<string>('REFRESH_EXP');
+    const expDate = new Date(Date.now() + ms(refreshExp));
 
-  //   await this.prisma.token.upsert();
-  // }
+    return await this.prisma.token.upsert({
+      where: {
+        userId_userAgent: { userId, userAgent },
+      },
+      update: {
+        token: uuidV4,
+        exp: expDate,
+      },
+      create: {
+        token: uuidV4,
+        exp: expDate,
+        userAgent,
+        userId,
+      },
+      select: {
+        token: true,
+        exp: true,
+      },
+    });
+  }
 }

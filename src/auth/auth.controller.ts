@@ -12,7 +12,6 @@ export class AuthController {
   @Public()
   registerLocal(
     @Body() dto: RegisterLocalUserDto,
-    // @Headers('user-agent') userAgent: string,
     // @Res({ passthrough: true }) res: Response,
   ) {
     // console.log(userAgent);
@@ -22,7 +21,7 @@ export class AuthController {
 
   @Post('login-local')
   @Public()
-  loginLocal(@Body() dto: LoginInDto) {
-    return this.authService.logInLocal(dto);
+  loginLocal(@Body() dto: LoginInDto, @Headers('user-agent') userAgent: string) {
+    return this.authService.logInLocal(dto, userAgent);
   }
 }
