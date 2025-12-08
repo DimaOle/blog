@@ -13,6 +13,8 @@ import { v4 as uuidv4 } from 'uuid';
 import { ConfigService } from '@nestjs/config';
 import { PayloadRefreshToken } from './interfaces';
 import { UserService } from 'src/user/user.service';
+import { CookieService } from './cookie.service';
+import { Response } from 'express';
 // eslint-disable-next-line @typescript-eslint/no-var-requires
 const ms = require('ms');
 @Injectable()
@@ -22,6 +24,7 @@ export class AuthService {
     private configServise: ConfigService,
     private userService: UserService,
     private jwtService: JwtService,
+    private cookieService: CookieService,
   ) {}
   async registerLocal(dto: RegisterLocalUserDto): Promise<CreatedUser> {
     const findUser = await this.userService.getUserByEmail(dto.email);
@@ -49,7 +52,7 @@ export class AuthService {
     return craeteUser;
   }
 
-  async logInLocal(dto: LoginInDto, userAgent: string) {
+  async logInLocal(dto: LoginInDto, userAgent: string, res: Response) {
     const user = await this.prisma.user.findUnique({ where: { email: dto.email } });
 
     if (!user) {
@@ -61,10 +64,11 @@ export class AuthService {
     if (!passwordIsMatch) {
       throw new UnauthorizedException('Invalid email or password');
     }
-    const test = await this.createRefreshToken(user.id, userAgent);
-    console.log(test);
+    await this.createRefreshToken(user.id, userAgent, res);
     return this.createJwtToken(dto.email, user.password);
   }
+
+  async refreshToken(res: Response, userAgent: string, userId: string) {}
 
   private async createJwtToken(email: string, password: string): Promise<{ access_token: string }> {
     const payload = { user: email, pas: password };
@@ -77,12 +81,13 @@ export class AuthService {
   private async createRefreshToken(
     userId: string,
     userAgent: string,
+    res: Response,
   ): Promise<PayloadRefreshToken> {
     const uuidV4 = uuidv4();
     const refreshExp = this.configServise.get<string>('REFRESH_EXP');
     const expDate = new Date(Date.now() + ms(refreshExp));
 
-    return await this.prisma.token.upsert({
+    const refreshToken = await this.prisma.token.upsert({
       where: {
         userId_userAgent: { userId, userAgent },
       },
@@ -101,5 +106,8 @@ export class AuthService {
         exp: true,
       },
     });
+
+    this.cookieService.setRefreshToken(res, refreshToken.token);
+    return refreshToken;
   }
 }
