@@ -26,7 +26,6 @@ export class AuthController {
   }
 
   @Post('refresh-token')
-  @Public()
   refreshToken(
     @Body() dto: RefreshTokenDto,
     @Headers('user-agent') userAgent: string,

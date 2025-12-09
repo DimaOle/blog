@@ -11,5 +11,6 @@ import { CookieService } from './cookie.service';
   controllers: [AuthController],
   providers: [AuthService, CookieService],
   imports: [PrismaModule, UserModule, JwtModule.registerAsync(options())],
+  exports: [JwtModule],
 })
 export class AuthModule {}
