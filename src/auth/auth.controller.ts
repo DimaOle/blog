@@ -1,7 +1,7 @@
 import { Body, Controller, Headers, Post, Res } from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { Public } from 'src/libs/common/src/decorators';
-import { LoginInDto, RegisterLocalUserDto } from './dto';
+import { LoginInDto, RefreshTokenDto, RegisterLocalUserDto } from './dto';
 import { Response } from 'express';
 import { CookieService } from './cookie.service';
 
@@ -23,5 +23,15 @@ export class AuthController {
     @Res({ passthrough: true }) res: Response,
   ) {
     return this.authService.logInLocal(dto, userAgent, res);
+  }
+
+  @Post('refresh-token')
+  @Public()
+  refreshToken(
+    @Body() dto: RefreshTokenDto,
+    @Headers('user-agent') userAgent: string,
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    return this.authService.refreshToken(res, userAgent, dto.userId);
   }
 }

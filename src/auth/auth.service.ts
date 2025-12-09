@@ -68,7 +68,39 @@ export class AuthService {
     return this.createJwtToken(dto.email, user.password);
   }
 
-  async refreshToken(res: Response, userAgent: string, userId: string) {}
+  async refreshToken(
+    res: Response,
+    userAgent: string,
+    userId: string,
+  ): Promise<{ access_token: string }> {
+    try {
+      const user = await this.prisma.token.findUnique({
+        where: { userId_userAgent: { userId, userAgent } },
+        include: {
+          user: {
+            select: {
+              email: true,
+              password: true,
+            },
+          },
+        },
+      });
+      if (!user) {
+        throw new UnauthorizedException('refreToken expired');
+      }
+
+      if (new Date() > user.exp) {
+        throw new UnauthorizedException('refreToken expired');
+      }
+
+      await this.createRefreshToken(userId, userAgent, res);
+
+      return this.createJwtToken(user.user.email, user.user.password);
+    } catch (e) {
+      console.log(`Prisma: ${e}`);
+      throw new InternalServerErrorException('Database error');
+    }
+  }
 
   private async createJwtToken(email: string, password: string): Promise<{ access_token: string }> {
     const payload = { user: email, pas: password };
